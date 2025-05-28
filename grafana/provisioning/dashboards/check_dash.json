@@ -1,0 +1,31 @@
+{
+  "id": null,
+  "uid": "sample-dashboard",
+  "title": "Test Dashboard",
+  "tags": ["test"],
+  "timezone": "browser",
+  "schemaVersion": 16,
+  "version": 0,
+  "refresh": "5s",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Test Data Over Time",
+      "datasource": "PostgreSQL",
+      "targets": [
+        {
+          "format": "time_series",
+          "rawSql": "SELECT heart_rate  FROM heart_data ORDER BY time ASC",
+          "refId": "A"
+        }
+      ],
+      "id": 1,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    }
+  ]
+}

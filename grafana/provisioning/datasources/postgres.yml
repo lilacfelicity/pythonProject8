@@ -1,0 +1,14 @@
+apiVersion: 1
+
+datasources:
+  - name: PostgreSQL
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    database: medical_db
+    user: medical_user
+    password: medical_password
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1500
+    editable: true

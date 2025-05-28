@@ -1,0 +1,286 @@
+{
+  "title": "Medical Monitoring Dashboard",
+  "uid": "medical-dashboard",
+  "panels": [
+    {
+      "id": 10,
+      "type": "alert",
+      "name": "High Heart Rate Alert",
+      "frequency": "1m",
+      "handler": 1,
+      "noDataState": "no_data",
+      "conditions": [
+        {
+          "type": "query",
+          "query": { "params": ["A"] },
+          "reducer": { "type": "avg", "params": [] },
+          "evaluator": { "type": "gt", "params": [80] },
+          "operator": { "type": "and" }
+        }
+      ],
+      "notifications": []
+    },
+    {
+      "id": 1,
+      "title": "❤️ Heart Rate",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 100 },
+              { "color": "red", "value": 120 }
+            ]
+          },
+          "unit": "bpm",
+          "min": 40,
+          "max": 180
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "medical-postgres" },
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, heart_rate FROM heart_data WHERE $__timeFilter(timestamp) ORDER BY timestamp DESC LIMIT 1",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "🩸 Blood Pressure",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 140 },
+              { "color": "red", "value": 160 }
+            ]
+          },
+          "unit": "mmHg"
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "medical-postgres" },
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, blood_pressure_systolic FROM heart_data WHERE $__timeFilter(timestamp) ORDER BY timestamp DESC LIMIT 1",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "🫁 SpO2 Level",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 90 },
+              { "color": "green", "value": 95 }
+            ]
+          },
+          "unit": "percent",
+          "min": 80,
+          "max": 100
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "medical-postgres" },
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, spo2 FROM heart_data WHERE $__timeFilter(timestamp) ORDER BY timestamp DESC LIMIT 1",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "🌡️ Temperature",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "blue", "value": null },
+              { "color": "green", "value": 36 },
+              { "color": "yellow", "value": 37.5 },
+              { "color": "red", "value": 38 }
+            ]
+          },
+          "unit": "celsius",
+          "min": 35,
+          "max": 42
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "medical-postgres" },
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, temperature FROM heart_data WHERE $__timeFilter(timestamp) ORDER BY timestamp DESC LIMIT 1",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Heart Rate Timeline",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "line" }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 100 },
+              { "color": "red", "value": 120 }
+            ]
+          },
+          "unit": "bpm"
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "medical-postgres" },
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, heart_rate FROM heart_data WHERE $__timeFilter(timestamp) ORDER BY timestamp",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Blood Pressure Timeline",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "line" }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 140 },
+              { "color": "red", "value": 160 }
+            ]
+          },
+          "unit": "mmHg"
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "medical-postgres" },
+          "format": "time_series",
+          "rawSql": "SELECT timestamp AS time, blood_pressure_systolic AS \"Systolic\", blood_pressure_diastolic AS \"Diastolic\" FROM heart_data WHERE $__timeFilter(timestamp) ORDER BY timestamp",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 36,
+  "version": 2,
+  "refresh": "1m",
+  "timezone": "browser",
+  "editable": true
+}

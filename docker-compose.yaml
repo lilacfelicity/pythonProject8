@@ -1,0 +1,266 @@
+version: '3.8'
+
+networks:
+  medical_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  postgres_airflow_data:
+    driver: local
+  redis_data:
+    driver: local
+  grafana_data:
+    driver: local
+  airflow_dags:
+    driver: local
+  airflow_logs:
+    driver: local
+  airflow_plugins:
+    driver: local
+
+services:
+  # PostgreSQL for main application
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    env_file:
+      - ./.env
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-medical_password}
+      POSTGRES_USER: ${DB_USER:-medical_user}
+      POSTGRES_DB: ${DB_NAME:-medical_db}
+      PGDATA: /var/lib/postgresql/postgres.yml/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-medical_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - medical_network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - medical_network
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: ../app/fastApi/backend/Dockerfile
+    container_name: medical_backend
+    volumes:
+      - ./backend:/app
+      - ./.env:/.env
+    ports:
+      - "8045:8045"
+    environment:
+      - DB_USER=${DB_USER:-medical_user}
+      - DB_PASSWORD=${DB_PASSWORD:-medical_password}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-medical_db}
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=${SECRET_KEY:-medical_secret_key_2024}
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+#      redis:
+#        condition: service_healthy
+#    healthcheck:
+#      test: ["CMD-SHELL", "curl -f http://localhost:8045/api/health || exit 1"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 3
+    restart: unless-stopped
+    networks:
+      - medical_network
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: medical_frontend
+    environment:
+      - VITE_API_URL=http://localhost:8045
+      - VITE_WS_URL=ws://localhost:8045
+      - VITE_GRAFANA_URL=http://localhost:3001
+      - REACT_APP_API_URL=http://localhost:8045/api
+      - REACT_APP_WEBSOCKET_URL=ws://localhost:8045/ws
+      - REACT_APP_GRAFANA_URL=http://localhost:3005
+      - REACT_APP_ENV=development
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - VITE_HOST=0.0.0.0
+      - VITE_PORT=3000
+    ports:
+      - "3000:3000"
+    volumes:
+      # Маунтим исходники для hot reload
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/package.json:/app/package.json
+      - ./frontend/vite.config.js:/app/vite.config.js
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js
+      - ./frontend/postcss.config.js:/app/postcss.config.js
+      - ./.env:/app/.env
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - medical_network
+
+  # IoT Simulator
+  iot-simulator:
+    build:
+      context: ./iot-simulator
+      dockerfile: Dockerfile
+    container_name: iot_simulator
+    environment:
+      - API_URL=http://backend:8045
+    restart: unless-stopped
+    networks:
+      - medical_network
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_DATABASE_TYPE=postgres
+      - GF_DATABASE_HOST=postgres:5432
+      - GF_DATABASE_NAME=${DB_NAME:-medical_db}
+      - GF_DATABASE_USER=${DB_USER:-medical_user}
+      - GF_DATABASE_PASSWORD=${DB_PASSWORD:-medical_password}
+      - GF_ALLOW_EMBEDDING=true
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_SECURITY_ALLOW_EMBEDDING_FROM_ANY_ORIGIN=true
+      - GF_FEATURE_TOGGLES_ENABLE=publicDashboards
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - medical_network
+
+#  # PostgreSQL for Airflow
+#  postgres-airflow:
+#    image: postgres:15-alpine
+#    container_name: postgres_airflow
+#    environment:
+#      POSTGRES_PASSWORD: airflow_password
+#      POSTGRES_USER: airflow_user
+#      POSTGRES_DB: airflow_db
+#    volumes:
+#      - postgres_airflow_data:/var/lib/postgresql/data
+#    ports:
+#      - "5433:5432"
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U airflow_user"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#    restart: unless-stopped
+#    networks:
+#      - medical_network
+
+#  # Airflow init
+#  airflow-init:
+#    image: apache/airflow:2.7.3
+#    container_name: airflow_init
+#    environment:
+#      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql://airflow_user:airflow_password@postgres-airflow:5432/airflow_db
+#      - AIRFLOW__CORE__FERNET_KEY=${AIRFLOW_FERNET_KEY:-your-fernet-key}
+#      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+#      - _AIRFLOW_DB_UPGRADE=true
+#      - _AIRFLOW_WWW_USER_CREATE=true
+#      - _AIRFLOW_WWW_USER_USERNAME=admin
+#      - _AIRFLOW_WWW_USER_PASSWORD=admin
+#    volumes:
+#      - ./airflow/dags:/opt/airflow/dags
+#    depends_on:
+#      postgres-airflow:
+#        condition: service_healthy
+#    entrypoint: /bin/bash
+#    command: >
+#      -c "airflow db init &&
+#          airflow users create --username admin --firstname Admin --lastname Admin --role Admin --email admin@example.com --password admin &&
+#          airflow connections add medical_postgres --conn-type postgres --conn-host postgres --conn-schema ${DB_NAME:-medical_db} --conn-login ${DB_USER:-medical_user} --conn-password ${DB_PASSWORD:-medical_password}"
+#    restart: "no"
+#    networks:
+#      - medical_network
+#
+#  # Airflow webserver
+#  airflow-webserver:
+#    image: apache/airflow:2.7.3
+#    container_name: airflow_webserver
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql://airflow_user:airflow_password@postgres-airflow:5432/airflow_db
+#      - AIRFLOW__CORE__FERNET_KEY=${AIRFLOW_FERNET_KEY:-your-fernet-key}
+#      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+#    volumes:
+#      - ./airflow/dags:/opt/airflow/dags
+#      - airflow_logs:/opt/airflow/logs
+#    depends_on:
+#      airflow-init:
+#        condition: service_completed_successfully
+#    command: airflow webserver
+#    healthcheck:
+#      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 3
+#    restart: always
+#    networks:
+#      - medical_network
+#
+#  # Airflow scheduler
+#  airflow-scheduler:
+#    image: apache/airflow:2.7.3
+#    container_name: airflow_scheduler
+#    environment:
+#      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql://airflow_user:airflow_password@postgres-airflow:5432/airflow_db
+#      - AIRFLOW__CORE__FERNET_KEY=${AIRFLOW_FERNET_KEY:-your-fernet-key}
+#      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+#    volumes:
+#      - ./airflow/dags:/opt/airflow/dags
+#      - airflow_logs:/opt/airflow/logs
+#    depends_on:
+#      airflow-init:
+#        condition: service_completed_successfully
+#    command: airflow scheduler
+#    restart: always
+#    networks:
+#      - medical_network

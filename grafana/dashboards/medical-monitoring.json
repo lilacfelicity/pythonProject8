@@ -1,0 +1,126 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "medical-monitoring",
+    "title": "Medical Monitoring Dashboard",
+    "description": "Медицинский мониторинг пациентов",
+    "tags": ["medical", "iot", "health", "patients"],
+    "timezone": "browser",
+    "editable": true,
+    "graphTooltip": 1,
+    "panels": [
+      {
+        "id": 2,
+        "title": "Heart Rate Trends",
+        "description": "Тренды сердечного ритма пациентов",
+        "type": "timeseries",
+        "targets": [
+          {
+            "rawSql": "SELECT timestamp as time, AVG(heart_rate) as \"Средний пульс\", MIN(heart_rate) as \"Мин пульс\", MAX(heart_rate) as \"Макс пульс\" FROM heart_data WHERE $__timeFilter(timestamp) GROUP BY DATE_TRUNC('minute', timestamp) ORDER BY time",
+            "refId": "A",
+            "datasource": {
+              "type": "postgres",
+              "uid": "postgres"
+            },
+            "format": "time_series"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 15,
+              "pointSize": 3
+            },
+            "unit": "bpm",
+            "min": 40,
+            "max": 120,
+            "thresholds": {
+              "steps": [
+                {"color": "blue", "value": null},
+                {"color": "red", "value": 50},
+                {"color": "green", "value": 60},
+                {"color": "yellow", "value": 100},
+                {"color": "red", "value": 110}
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 7,
+        "title": "Blood Pressure",
+        "type": "timeseries",
+        "targets": [
+          {
+            "rawSql": "SELECT timestamp as time, AVG(blood_pressure_systolic) as \"Систолическое\", AVG(blood_pressure_diastolic) as \"Диастолическое\" FROM heart_data WHERE $__timeFilter(timestamp) GROUP BY DATE_TRUNC('hour', timestamp) ORDER BY time",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "mmHg",
+            "custom": {
+              "drawStyle": "line",
+              "fillOpacity": 10
+            }
+          }
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 8,
+        "title": "Oxygen Saturation",
+        "type": "gauge",
+        "targets": [
+          {
+            "rawSql": "SELECT AVG(spo2) as value FROM heart_data WHERE timestamp >= NOW() - INTERVAL '1 hour'",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 90,
+            "max": 100,
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 90},
+                {"color": "yellow", "value": 95},
+                {"color": "green", "value": 97}
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        }
+      }
+    ],
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "schemaVersion": 39,
+    "version": 1
+  }
+}

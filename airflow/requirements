@@ -1,0 +1,31 @@
+# airflow-requirements.txt
+
+apache-airflow==2.7.1
+apache-airflow-providers-redis==3.2.1
+
+# Для Airflow нужна SQLAlchemy 1.4.x, Alembic 1.13.1+
+sqlalchemy==1.4.48
+alembic==1.13.1
+
+# Postgres драйвер
+psycopg2-binary==2.9.9
+
+# Redis клиент
+redis[hiredis]==5.0.1
+
+# HTTP клиент, для интеграции и т.п.
+httpx==0.25.2
+
+# Без Pydantic 2.x (чтобы избежать конфликтов)
+pydantic==1.10.12
+
+# Airflow клиент для интеграции из FastAPI и других сервисов
+apache-airflow-client==2.7.3
+apache-airflow-providers-redis==3.5.0
+
+# Системные зависимости
+psutil==5.9.6
+
+
+# Логи и мониторинг
+prometheus-client==0.19.0

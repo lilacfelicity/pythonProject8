@@ -1,0 +1,136 @@
+# grafana/provisioning/alerting/notifications.yml
+# Конфигурация каналов уведомлений
+
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: medical-team-email
+    receivers:
+      - uid: medical_email_receiver
+        type: email
+        settings:
+          addresses: medical-team@hospital.com
+          subject: "[MedMonitor] {{ .GroupLabels.severity | title }} Alert"
+          message: |
+            {{ range .Alerts }}
+            **Alert:** {{ .Annotations.summary }}
+            **Description:** {{ .Annotations.description }}
+            **Severity:** {{ .Labels.severity }}
+            **Patient:** {{ .Labels.patient_name }}
+            **Time:** {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+            **Status:** {{ .Status }}
+            {{ end }}
+
+  - orgId: 1
+    name: critical-alerts-webhook
+    receivers:
+      - uid: critical_webhook_receiver
+        type: webhook
+        settings:
+          url: http://medical_app:8000/api/alerts/webhook
+          httpMethod: POST
+          title: "MedMonitor Critical Alert"
+          message: |
+            {
+              "alert_type": "{{ .GroupLabels.severity }}",
+              "summary": "{{ .CommonAnnotations.summary }}",
+              "description": "{{ .CommonAnnotations.description }}",
+              "patient": "{{ .CommonLabels.patient_name }}",
+              "timestamp": "{{ .CommonAnnotations.timestamp }}",
+              "alerts_count": {{ len .Alerts }}
+            }
+
+  - orgId: 1
+    name: slack-medical-channel
+    receivers:
+      - uid: slack_medical_receiver
+        type: slack
+        settings:
+          url: https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+          channel: "#medical-alerts"
+          username: MedMonitor
+          title: "🏥 Medical Alert - {{ .GroupLabels.severity | title }}"
+          text: |
+            {{ range .Alerts }}
+            *{{ .Annotations.summary }}*
+            
+            📋 **Details:**
+            • Patient: {{ .Labels.patient_name }}
+            • Device: {{ .Labels.device_name }}
+            • Time: {{ .StartsAt.Format "15:04:05" }}
+            • Value: {{ .ValueString }}
+            
+            🔍 **Description:** {{ .Annotations.description }}
+            {{ end }}
+          color: |
+            {{ if eq .GroupLabels.severity "critical" }}danger{{ else if eq .GroupLabels.severity "warning" }}warning{{ else }}good{{ end }}
+
+  - orgId: 1
+    name: telegram-medical-bot
+    receivers:
+      - uid: telegram_medical_receiver
+        type: telegram
+        settings:
+          botToken: YOUR_TELEGRAM_BOT_TOKEN
+          chatId: -1001234567890  # ID вашего Telegram канала/группы
+          message: |
+            🚨 *MedMonitor Alert*
+            
+            {{ range .Alerts }}
+            *{{ .Annotations.summary }}*
+            
+            👤 Patient: `{{ .Labels.patient_name }}`
+            🏥 Device: `{{ .Labels.device_name }}`
+            ⏰ Time: `{{ .StartsAt.Format "15:04:05" }}`
+            📊 Value: `{{ .ValueString }}`
+            
+            📝 {{ .Annotations.description }}
+            {{ end }}
+
+notificationPolicies:
+  - orgId: 1
+    receiver: medical-team-email
+    group_by: ['alertname', 'severity']
+    group_wait: 10s
+    group_interval: 5m
+    repeat_interval: 12h
+    routes:
+      - receiver: critical-alerts-webhook
+        matchers:
+          - severity = critical
+        group_wait: 5s
+        group_interval: 1m
+        repeat_interval: 5m
+
+      - receiver: slack-medical-channel
+        matchers:
+          - team = medical
+        group_wait: 15s
+        group_interval: 10m
+        repeat_interval: 4h
+
+      - receiver: telegram-medical-bot
+        matchers:
+          - severity = critical
+          - type = vital_signs
+        group_wait: 1s
+        group_interval: 30s
+        repeat_interval: 1h
+
+muteTimings:
+  - orgId: 1
+    name: night-maintenance
+    time_intervals:
+      - time
+          - start_time: "02:00"
+            end_time: "06:00"
+        weekdays: ["monday:friday"]
+
+  - orgId: 1
+    name: weekend-non-critical
+    time_intervals:
+      - weekdays: ["saturday", "sunday"]
+        times:
+          - start_time: "20:00"
+            end_time: "08:00"
