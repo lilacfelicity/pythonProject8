@@ -1,65 +1,36 @@
 import React, { useState } from 'react'
-import { Heart, User, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
-
-// Тестовые данные для пользователя Екатерина
-const testUser = {
-  id: 1,
-  fullName: "Смирнова Екатерина Алексеевна",
-  email: "ekaterina.smirnova@email.com",
-  birthDate: "11.03.2001",
-  role: "patient",
-  profile: {
-    firstName: "Екатерина",
-    lastName: "Смирнова",
-    patronymic: "Алексеевна",
-    phone: "+7 (999) 123-45-67",
-    bloodType: "A(II) Rh+",
-    height: 165,
-    weight: 58,
-    allergies: "Нет данных о серьезных аллергиях для этого устройства",
-    chronicConditions: "Нет данных",
-    emergencyContact: "Мама: +7 (999) 987-65-43"
-  },
-  devices: [
-    { id: 1, name: "Пульсоксиметр", deviceId: "PULSE_001", status: "active", lastSeen: new Date() },
-    { id: 2, name: "Тонометр", deviceId: "BP_001", status: "active", lastSeen: new Date() }
-  ],
-  medicalHistory: [
-    { date: "02.05.2025", doctor: "Сидорова Анна Владимировна", diagnosis: "Первичный визит", status: "completed" },
-    { date: "15.10.2024", doctor: "Петрова Наталья Ивановна", diagnosis: "Аллергический ринит", status: "monitoring" },
-    { date: "12.07.2024", doctor: "Сидорова Анна Владимировна", diagnosis: "ОРЗ", status: "resolved" }
-  ],
-  medications: [
-    { name: "Омепразол", dosage: "20мг", frequency: "1 раз в день", startDate: "01.03.2025" },
-    { name: "Анальгин", dosage: "500мг", frequency: "При болях", startDate: "15.02.2025" },
-    { name: "Лоратадин", dosage: "10мг", frequency: "1 раз в день", startDate: "10.02.2025" }
-  ]
-}
+import { Heart, User, Lock, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react'
+import api from '../services/api'
 
 const Login = ({ onLogin }) => {
   const [formData, setFormData] = useState({
-    email: 'ekaterina.smirnova@email.com',
-    password: 'demo123'
+    email: '',
+    password: ''
   })
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('login')
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSubmit = async () => {
     setIsLoading(true)
     setError('')
 
-    // Симуляция проверки авторизации
-    setTimeout(() => {
-      if (formData.email === 'ekaterina.smirnova@email.com' && formData.password === 'demo123') {
-        onLogin(testUser)
-      } else {
-        setError('Неверный email или пароль')
-      }
+    try {
+      // Авторизация через API
+      await api.login(formData.email, formData.password)
+
+      // Получаем информацию о пользователе
+      const userInfo = await api.getMe()
+
+      onLogin(userInfo)
+
+    } catch (error) {
+      console.error('Login error:', error)
+      setError(error.message || 'Ошибка авторизации')
+    } finally {
       setIsLoading(false)
-    }, 1500)
+    }
   }
 
   const handleChange = (e) => {
@@ -67,6 +38,10 @@ const Login = ({ onLogin }) => {
       ...formData,
       [e.target.name]: e.target.value
     })
+    // Очищаем ошибку при изменении полей
+    if (error) {
+      setError('')
+    }
   }
 
   return (
@@ -86,7 +61,7 @@ const Login = ({ onLogin }) => {
           <div className="flex border-b border-gray-200">
             <button
               onClick={() => setActiveTab('login')}
-              className={`flex-1 py-3 text-sm font-medium ${
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${
                 activeTab === 'login'
                   ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                   : 'text-gray-500 hover:text-gray-700'
@@ -96,7 +71,7 @@ const Login = ({ onLogin }) => {
             </button>
             <button
               onClick={() => setActiveTab('register')}
-              className={`flex-1 py-3 text-sm font-medium ${
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${
                 activeTab === 'register'
                   ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                   : 'text-gray-500 hover:text-gray-700'
@@ -108,17 +83,17 @@ const Login = ({ onLogin }) => {
 
           <div className="px-8 py-8">
             {activeTab === 'login' ? (
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-6">
                 {error && (
-                  <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <AlertCircle className="h-5 w-5 text-red-500" />
+                  <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg animate-in slide-in-from-top duration-200">
+                    <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
                     <span className="text-sm text-red-700">{error}</span>
                   </div>
                 )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email или пользователь
+                    Email
                   </label>
                   <div className="relative">
                     <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
@@ -127,9 +102,10 @@ const Login = ({ onLogin }) => {
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       placeholder="Введите ваш email"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
@@ -145,14 +121,16 @@ const Login = ({ onLogin }) => {
                       name="password"
                       value={formData.password}
                       onChange={handleChange}
-                      className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                       placeholder="Введите пароль"
                       required
+                      disabled={isLoading}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 transition-colors"
+                      disabled={isLoading}
                     >
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
@@ -160,13 +138,13 @@ const Login = ({ onLogin }) => {
                 </div>
 
                 <button
-                  type="submit"
+                  onClick={handleSubmit}
                   disabled={isLoading}
-                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <div className="flex items-center justify-center">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
                       Вход в систему...
                     </div>
                   ) : (
@@ -175,11 +153,11 @@ const Login = ({ onLogin }) => {
                 </button>
 
                 <div className="text-center">
-                  <a href="#" className="text-sm text-blue-600 hover:text-blue-700">
+                  <a href="#" className="text-sm text-blue-600 hover:text-blue-700 transition-colors">
                     Забыли пароль?
                   </a>
                 </div>
-              </form>
+              </div>
             ) : (
               <div className="text-center py-8">
                 <div className="mb-4">
@@ -193,13 +171,13 @@ const Login = ({ onLogin }) => {
                 </p>
                 <div className="space-y-3">
                   <div className="text-xs text-gray-500">
-                    <strong>Для пользователей:</strong>
+                    <strong>Для регистрации необходимо:</strong>
                   </div>
-                  <div className="text-xs text-gray-600 space-y-1">
-                    <div>• Ввести ваш персональный идентификационный номер</div>
-                    <div>• Указать данные электронной почты</div>
-                    <div>• Ввести дату рождения-электронной</div>
-                    <div>• Пароль</div>
+                  <div className="text-xs text-gray-600 space-y-1 text-left bg-gray-50 p-4 rounded-lg">
+                    <div>• Персональный идентификационный номер</div>
+                    <div>• Данные электронной почты</div>
+                    <div>• Дата рождения</div>
+                    <div>• Телефон для связи</div>
                   </div>
                 </div>
                 <button className="w-full mt-6 bg-gray-100 text-gray-600 py-3 rounded-lg font-medium cursor-not-allowed">
@@ -209,14 +187,15 @@ const Login = ({ onLogin }) => {
             )}
           </div>
 
+          {/* Info */}
           <div className="px-8 pb-8">
             <div className="p-4 bg-blue-50 rounded-lg">
-              <h3 className="font-medium text-blue-900 mb-2">О системе мониторинга:</h3>
+              <h3 className="font-medium text-blue-900 mb-2">Система мониторинга:</h3>
               <ul className="text-sm text-blue-700 space-y-1">
-                <li>• Пульс и вариабельность сердечного ритма</li>
-                <li>• Артериальное давление</li>
-                <li>• Сатурация кислорода (SpO2)</li>
-                <li>• Температура тела</li>
+                <li>• Мониторинг пульса и давления</li>
+                <li>• Анализ лабораторных данных</li>
+                <li>• История болезни и лечения</li>
+                <li>• Интеграция с IoT устройствами</li>
               </ul>
               <div className="mt-3 text-xs text-blue-600">
                 <p><strong>Важно:</strong> Система мониторинга не заменяет экстренную медицинскую помощь. При критических состояниях немедленно обратитесь к врачу.</p>

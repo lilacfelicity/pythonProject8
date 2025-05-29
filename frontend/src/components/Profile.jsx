@@ -437,7 +437,7 @@ const Profile = ({ user, compact = false }) => {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">ID пациента:</span>
-                <span className="font-mono text-gray-900">#{user?.id || '12345'}</span>
+                <span className="font-mono text-gray-900">#{user?.id || '1'}</span>
               </div>
 
               <div className="flex justify-between">
