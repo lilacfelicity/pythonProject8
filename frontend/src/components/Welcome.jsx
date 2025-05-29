@@ -145,7 +145,7 @@ const Welcome = ({ user, onContinue }) => {
                     {user?.fullName || 'Пациент'}
                   </div>
                   <div className="text-sm text-gray-500">
-                    ID: #{user?.id || '12345'} • Подключено: {new Date().toLocaleDateString('ru-RU')}
+                    ID: #{user?.id || '1'} • Подключено: {new Date().toLocaleDateString('ru-RU')}
                   </div>
                 </div>
               </div>

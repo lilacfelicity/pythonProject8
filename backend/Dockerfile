@@ -1,27 +1,28 @@
 FROM python:3.11-slim
 
-
+WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y \
     gcc \
-    python3-dev \
-    libpq-dev \
     curl \
-    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
+COPY requirements.txt .
 
-WORKDIR /app
-COPY backend/requirements.txt .
-
-# Устанавливаем зависимости Python
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
 
+# Create directories
+RUN mkdir -p /app/api /app/core /app/services /app/migrations/versions
+
+# Make entrypoint executable
+RUN chmod +x entrypoint.py
+
 EXPOSE 8045
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8045", "--reload"]
+ENTRYPOINT ["python", "entrypoint.py"]

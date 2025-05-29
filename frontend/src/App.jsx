@@ -13,7 +13,7 @@ import Analytics from './components/Analytics.jsx'
 
 // Тестовые данные пользователя (исправлены для соответствия Analytics)
 const testUser = {
-  id: 12345,
+  id: 1,
   fullName: "Петрова Ирина Сергеевна",
   email: "irina.petrova@email.com",
   birthDate: "15.08.2001",

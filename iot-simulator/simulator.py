@@ -5,6 +5,7 @@ import json
 import logging
 from datetime import datetime
 import math
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -133,8 +134,8 @@ class MultiDeviceSimulator:
 
 async def main():
     # Configuration
-    API_URL = "http://backend:8045"  # Docker network
-    # API_URL = "http://localhost:8045"  # Local testing
+    API_URL = os.getenv("API_URL", "http://nginx/api")  # Through nginx in Docker
+    # API_URL = "http://localhost/api"  # Local testing through nginx
 
     # Create simulator
     simulator = MultiDeviceSimulator(API_URL)

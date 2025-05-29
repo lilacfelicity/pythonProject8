@@ -3,7 +3,7 @@ import { Heart, User, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 // Тестовые данные для пользователя Екатерина
 const testUser = {
-  id: 12345,
+  id: 1,
   fullName: "Смирнова Екатерина Алексеевна",
   email: "ekaterina.smirnova@email.com",
   birthDate: "11.03.2001",

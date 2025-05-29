@@ -5,6 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel
 import hashlib
 import secrets
+import os
 
 from database import get_db
 from models import User, UserProfile, UserRole
@@ -12,9 +13,9 @@ from models import User, UserProfile, UserRole
 router = APIRouter()
 security = HTTPBearer()
 
-# Config
-SECRET_KEY = "medical_secret_key_2024"
-SALT = secrets.token_hex(32)
+# Config from environment or defaults
+SECRET_KEY = os.getenv("SECRET_KEY", "medical_secret_key_2024")
+SALT = os.getenv("SALT", "your-salt-here")
 
 
 class LoginRequest(BaseModel):
@@ -31,7 +32,7 @@ class RegisterRequest(BaseModel):
 
 
 def hash_password(password: str) -> str:
-    return hashlib.pbkdf2_hex(password + SALT, SALT.encode(), 100000)
+    return hashlib.pbkdf2_hmac('sha256', (password + SALT).encode(), SALT.encode(), 100000).hex()
 
 
 def verify_password(password: str, hashed: str) -> bool:

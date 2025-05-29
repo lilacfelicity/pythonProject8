@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Activity, Heart, Droplets, Thermometer, AlertCircle, Wifi, WifiOff } from 'lucide-react'
 import { Line, LineChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
-import { useWebSocket } from '../../hooks/useWebSocket.jsx'
-import MetricCard from './MetricCard.jsx'
-import api from '../../services/api.js'
+import { useWebSocket } from '../../hooks/useWebSocket'
+import MetricCard from './MetricCard'
+import api from '../../services/api'
 
 const Dashboard = ({ user }) => {
   const [vitals, setVitals] = useState({
@@ -17,7 +17,7 @@ const Dashboard = ({ user }) => {
   const [isConnected, setIsConnected] = useState(false)
 
   const { sendMessage, lastMessage, readyState } = useWebSocket(
-    `${import.meta.env.VITE_WS_URL || 'ws://localhost:8045'}/ws/${user?.id || 'default'}`
+    `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/${user?.id || 'default'}`
   )
 
   // Load initial data

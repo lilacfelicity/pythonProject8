@@ -1,9 +1,30 @@
 from sqlalchemy import Column, LargeBinary, Integer, String, Float, DateTime, Boolean, ForeignKey, Enum, Text, Index
+from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import relationship, backref
 from database import Base
 
 import datetime
 import enum
+import os
+
+TABLE_PREFIX = os.getenv("TABLE_PREFIX", "med_")
+
+class PrefixedBase:
+    """
+    Базовый класс который автоматически добавляет префикс к именам таблиц
+    """
+    @declared_attr
+    def __tablename__(cls):
+        # Конвертируем CamelCase в snake_case и добавляем префикс
+        name = cls.__name__
+        # UserProfile -> user_profiles, HeartData -> heart_data
+        import re
+        name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+        name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
+        return f"{TABLE_PREFIX}{name}s"
+
+# Создаем новый Base с нашим кастомным классом
+Base = declarative_base(cls=PrefixedBase)
 
 class UserRole(enum.Enum):
     PATIENT = "patient"
@@ -19,7 +40,6 @@ class DeviceStatus(enum.Enum):
 
 class User(Base):
     """Усиленная модель пользователя с реальной безопасностью"""
-    __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True, nullable=False)
@@ -53,13 +73,12 @@ class User(Base):
 
 class Device(Base):
     """IoT устройства с оптимизированными индексами"""
-    __tablename__ = "devices"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
     description = Column(Text, nullable=True)
     device_id = Column(String(50), unique=True, index=True, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}users.id"), nullable=False)
 
     status = Column(Enum(DeviceStatus), default=DeviceStatus.ACTIVE, nullable=False)
     last_seen = Column(DateTime, nullable=True)
@@ -71,17 +90,16 @@ class Device(Base):
     heart_readings = relationship("HeartData", back_populates="device")
 
     __table_args__ = (
-        Index('idx_device_user_active', 'user_id', 'status'),
-        Index('idx_device_last_seen', 'last_seen'),
+        Index(f'idx_{TABLE_PREFIX}device_user_active', 'user_id', 'status'),
+        Index(f'idx_{TABLE_PREFIX}device_last_seen', 'last_seen'),
     )
 
 
 class SensorReading(Base):
     """Данные с датчиков окружающей среды"""
-    __tablename__ = "sensor_readings"
 
     id = Column(Integer, primary_key=True, index=True)
-    device_id = Column(Integer, ForeignKey("devices.id"), nullable=False)
+    device_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}devices.id"), nullable=False)
     timestamp = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
 
     temperature = Column(Float, nullable=True)
@@ -95,16 +113,15 @@ class SensorReading(Base):
     device = relationship("Device", back_populates="readings")
 
     __table_args__ = (
-        Index('idx_sensor_device_timestamp', 'device_id', 'timestamp'),
+        Index(f'idx_{TABLE_PREFIX}sensor_device_timestamp', 'device_id', 'timestamp'),
     )
 
 
 class HeartData(Base):
     """Кардиологические данные"""
-    __tablename__ = "heart_data"
 
     id = Column(Integer, primary_key=True, index=True)
-    device_id = Column(Integer, ForeignKey("devices.id"), nullable=False)
+    device_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}devices.id"), nullable=False)
     timestamp = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
 
     heart_rate = Column(Integer, nullable=True)
@@ -118,16 +135,15 @@ class HeartData(Base):
     device = relationship("Device", back_populates="heart_readings")
 
     __table_args__ = (
-        Index('idx_heart_device_timestamp', 'device_id', 'timestamp'),
+        Index('idx_{TABLE_PREFIX}heart_device_timestamp', 'device_id', 'timestamp'),
     )
 
 
 class UserProfile(Base):
     """Профиль пользователя"""
-    __tablename__ = "user_profiles"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    user_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}users.id"), unique=True, nullable=False)
 
     first_name = Column(String(50), nullable=False)
     last_name = Column(String(50), nullable=False)
@@ -153,7 +169,6 @@ class UserProfile(Base):
 
 class Doctor(Base):
     """Врачи в системе"""
-    __tablename__ = "doctors"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
@@ -169,11 +184,10 @@ class Doctor(Base):
 
 class PatientDoctor(Base):
     """Связь пациент-врач"""
-    __tablename__ = "patient_doctors"
 
     id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    doctor_id = Column(Integer, ForeignKey("doctors.id"), nullable=False)
+    patient_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}users.id"), nullable=False)
+    doctor_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}doctors.id"), nullable=False)
     is_primary = Column(Boolean, default=False, nullable=False)
     assigned_date = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
 
@@ -183,11 +197,10 @@ class PatientDoctor(Base):
 
 class Diagnosis(Base):
     """Диагнозы пациентов"""
-    __tablename__ = "diagnoses"
 
     id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    doctor_id = Column(Integer, ForeignKey("doctors.id"), nullable=False)
+    patient_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}users.id"), nullable=False)
+    doctor_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}doctors.id"), nullable=False)
     date = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     title = Column(String(200), nullable=False)
     status = Column(String(20), default="active", nullable=False)
@@ -198,16 +211,15 @@ class Diagnosis(Base):
 
 class Medication(Base):
     """Лекарственные назначения"""
-    __tablename__ = "medications"
 
     id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    patient_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}users.id"), nullable=False)
     name = Column(String(200), nullable=False)
     dosage = Column(String(100), nullable=False)
     frequency = Column(String(100), nullable=False)
     start_date = Column(DateTime, nullable=False)
     end_date = Column(DateTime, nullable=True)
-    prescribed_by = Column(Integer, ForeignKey("doctors.id"), nullable=False)
+    prescribed_by = Column(Integer, ForeignKey(f"{TABLE_PREFIX}doctors.id"), nullable=False)
 
     patient = relationship("User", back_populates="medications")
     doctor = relationship("Doctor")
@@ -215,11 +227,10 @@ class Medication(Base):
 
 class Visit(Base):
     """Визиты к врачам"""
-    __tablename__ = "visits"
 
     id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    doctor_id = Column(Integer, ForeignKey("doctors.id"), nullable=False)
+    patient_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}users.id"), nullable=False)
+    doctor_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}doctors.id"), nullable=False)
     date = Column(DateTime, nullable=False)
     reason = Column(String(500), nullable=False)
     notes = Column(Text, nullable=True)
@@ -230,11 +241,10 @@ class Visit(Base):
 
 class MedicalTest(Base):
     """Медицинские исследования"""
-    __tablename__ = "medical_tests"
 
     id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    ordered_by = Column(Integer, ForeignKey("doctors.id"), nullable=False)
+    patient_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}users.id"), nullable=False)
+    ordered_by = Column(Integer, ForeignKey(f"{TABLE_PREFIX}doctors.id"), nullable=False)
     date = Column(DateTime, nullable=False)
     name = Column(String(200), nullable=False)
     results = Column(Text, nullable=False)
@@ -246,11 +256,10 @@ class MedicalTest(Base):
 
 class FamilyAccess(Base):
     """Система семейного доступа"""
-    __tablename__ = "family_access"
 
     id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    family_member_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    patient_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}users.id"), nullable=False)
+    family_member_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}users.id"), nullable=False)
     relationship_type = Column(String(50), nullable=False)
 
     is_active = Column(Boolean, default=True, nullable=False)
@@ -270,21 +279,20 @@ class FamilyAccess(Base):
     family_member = relationship("User", foreign_keys=[family_member_id], backref="family_access_received")
 
     __table_args__ = (
-        Index('idx_family_patient_active', 'patient_id', 'is_active'),
-        Index('idx_family_member_active', 'family_member_id', 'is_active'),
+        Index(f'idx_{TABLE_PREFIX}family_patient_active', 'patient_id', 'is_active'),
+        Index(f'idx_{TABLE_PREFIX}family_member_active', 'family_member_id', 'is_active'),
     )
 
 
 class LabTest(Base):
     """Базовая модель лабораторного исследования"""
-    __tablename__ = "lab_tests"
 
     id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    patient_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}users.id"), nullable=False)
     test_date = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     lab_name = Column(String(100), nullable=False)
     reference_number = Column(String(50), nullable=True)
-    doctor_id = Column(Integer, ForeignKey("doctors.id"), nullable=True)
+    doctor_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}doctors.id"), nullable=True)
     notes = Column(Text, nullable=True)
 
     patient = relationship("User", back_populates="lab_tests")
@@ -293,10 +301,9 @@ class LabTest(Base):
 
 class BloodCount(Base):
     """Общий анализ крови"""
-    __tablename__ = "blood_count"
 
     id = Column(Integer, primary_key=True, index=True)
-    lab_test_id = Column(Integer, ForeignKey("lab_tests.id"), unique=True, nullable=False)
+    lab_test_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}lab_tests.id"), unique=True, nullable=False)
 
     hemoglobin = Column(Float, nullable=True)
     erythrocytes = Column(Float, nullable=True)
@@ -316,10 +323,9 @@ class BloodCount(Base):
 
 class Biochemistry(Base):
     """Биохимический анализ крови"""
-    __tablename__ = "biochemistry"
 
     id = Column(Integer, primary_key=True, index=True)
-    lab_test_id = Column(Integer, ForeignKey("lab_tests.id"), unique=True, nullable=False)
+    lab_test_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}lab_tests.id"), unique=True, nullable=False)
 
     glucose = Column(Float, nullable=True)
     creatinine = Column(Float, nullable=True)
@@ -340,10 +346,9 @@ class Biochemistry(Base):
 
 class LipidPanel(Base):
     """Липидный профиль"""
-    __tablename__ = "lipid_panel"
 
     id = Column(Integer, primary_key=True, index=True)
-    lab_test_id = Column(Integer, ForeignKey("lab_tests.id"), unique=True, nullable=False)
+    lab_test_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}lab_tests.id"), unique=True, nullable=False)
 
     total_cholesterol = Column(Float, nullable=True)
     hdl_cholesterol = Column(Float, nullable=True)
@@ -356,10 +361,9 @@ class LipidPanel(Base):
 
 class ThyroidPanel(Base):
     """Функция щитовидной железы"""
-    __tablename__ = "thyroid_panel"
 
     id = Column(Integer, primary_key=True, index=True)
-    lab_test_id = Column(Integer, ForeignKey("lab_tests.id"), unique=True, nullable=False)
+    lab_test_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}lab_tests.id"), unique=True, nullable=False)
 
     tsh = Column(Float, nullable=True)
     t3_free = Column(Float, nullable=True)
@@ -373,7 +377,7 @@ class Urinalysis(Base):
     __tablename__ = "urinalysis"
 
     id = Column(Integer, primary_key=True, index=True)
-    lab_test_id = Column(Integer, ForeignKey("lab_tests.id"), unique=True, nullable=False)
+    lab_test_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}lab_tests.id"), unique=True, nullable=False)
 
     protein = Column(String(50), nullable=True)
     glucose = Column(String(50), nullable=True)
@@ -385,10 +389,9 @@ class Urinalysis(Base):
 
 class VitaminLevels(Base):
     """Уровни витаминов"""
-    __tablename__ = "vitamin_levels"
 
     id = Column(Integer, primary_key=True, index=True)
-    lab_test_id = Column(Integer, ForeignKey("lab_tests.id"), unique=True, nullable=False)
+    lab_test_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}lab_tests.id"), unique=True, nullable=False)
 
     vitamin_b12 = Column(Float, nullable=True)
     vitamin_d = Column(Float, nullable=True)
@@ -400,10 +403,9 @@ class VitaminLevels(Base):
 
 class CardiacMarkers(Base):
     """Кардиологические маркеры"""
-    __tablename__ = "cardiac_markers"
 
     id = Column(Integer, primary_key=True, index=True)
-    lab_test_id = Column(Integer, ForeignKey("lab_tests.id"), unique=True, nullable=False)
+    lab_test_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}lab_tests.id"), unique=True, nullable=False)
 
     troponin = Column(Float, nullable=True)
     bnp = Column(Float, nullable=True)
@@ -413,10 +415,9 @@ class CardiacMarkers(Base):
 
 class TumorMarkers(Base):
     """Онкомаркеры"""
-    __tablename__ = "tumor_markers"
 
     id = Column(Integer, primary_key=True, index=True)
-    lab_test_id = Column(Integer, ForeignKey("lab_tests.id"), unique=True, nullable=False)
+    lab_test_id = Column(Integer, ForeignKey(f"{TABLE_PREFIX}lab_tests.id"), unique=True, nullable=False)
 
     psa = Column(Float, nullable=True)
     cea = Column(Float, nullable=True)

@@ -66,27 +66,27 @@ contactPoints:
           color: |
             {{ if eq .GroupLabels.severity "critical" }}danger{{ else if eq .GroupLabels.severity "warning" }}warning{{ else }}good{{ end }}
 
-  - orgId: 1
-    name: telegram-medical-bot
-    receivers:
-      - uid: telegram_medical_receiver
-        type: telegram
-        settings:
-          botToken: YOUR_TELEGRAM_BOT_TOKEN
-          chatId: -1001234567890  # ID вашего Telegram канала/группы
-          message: |
-            🚨 *MedMonitor Alert*
-            
-            {{ range .Alerts }}
-            *{{ .Annotations.summary }}*
-            
-            👤 Patient: `{{ .Labels.patient_name }}`
-            🏥 Device: `{{ .Labels.device_name }}`
-            ⏰ Time: `{{ .StartsAt.Format "15:04:05" }}`
-            📊 Value: `{{ .ValueString }}`
-            
-            📝 {{ .Annotations.description }}
-            {{ end }}
+#  - orgId: 1
+#    name: telegram-medical-bot
+#    receivers:
+#      - uid: telegram_medical_receiver
+#        type: telegram
+#        settings:
+#          botToken: YOUR_TELEGRAM_BOT_TOKEN
+#          chatId: -1001234567890  # ID вашего Telegram канала/группы
+#          message: |
+#            🚨 *MedMonitor Alert*
+#
+#            {{ range .Alerts }}
+#            *{{ .Annotations.summary }}*
+#
+#            👤 Patient: `{{ .Labels.patient_name }}`
+#            🏥 Device: `{{ .Labels.device_name }}`
+#            ⏰ Time: `{{ .StartsAt.Format "15:04:05" }}`
+#            📊 Value: `{{ .ValueString }}`
+#
+#            📝 {{ .Annotations.description }}
+#            {{ end }}
 
 notificationPolicies:
   - orgId: 1
@@ -110,19 +110,19 @@ notificationPolicies:
         group_interval: 10m
         repeat_interval: 4h
 
-      - receiver: telegram-medical-bot
-        matchers:
-          - severity = critical
-          - type = vital_signs
-        group_wait: 1s
-        group_interval: 30s
-        repeat_interval: 1h
+#      - receiver: telegram-medical-bot
+#        matchers:
+#          - severity = critical
+#          - type = vital_signs
+#        group_wait: 1s
+#        group_interval: 30s
+#        repeat_interval: 1h
 
 muteTimings:
   - orgId: 1
     name: night-maintenance
     time_intervals:
-      - time
+      - times:
           - start_time: "02:00"
             end_time: "06:00"
         weekdays: ["monday:friday"]

@@ -1,0 +1,20 @@
+# Development overrides (copy to docker-compose.override.yml)
+version: '3.8'
+
+services:
+  # Example: expose ports directly for development
+  postgres:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"
+
+  # Example: mount code for hot reload
+  backend:
+    volumes:
+      - ./backend:/app
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1

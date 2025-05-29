@@ -51,7 +51,7 @@ const Sidebar = ({ mobile, onClose, user }) => {
                 {user.fullName || 'Пользователь'}
               </p>
               <p className="text-xs text-gray-500">
-                ID: #{user.id || '12345'}
+                ID: #{user.id || '1'}
               </p>
             </div>
           </div>
