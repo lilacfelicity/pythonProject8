@@ -114,6 +114,14 @@ services:
       - VITE_GRAFANA_URL=/grafana
     expose:
       - "3000"
+    volumes:
+      # Маунтим исходники для hot reload
+      - ./frontend/src:/app/src
+      - ./frontend/package.json:/app/package.json
+      - ./frontend/vite.config.js:/app/vite.config.js
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js
+      - ./frontend/postcss.config.js:/app/postcss.config.js
+      - ./.env:/app/.env
     depends_on:
       - backend
     restart: unless-stopped

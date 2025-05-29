@@ -2,14 +2,18 @@ import React, { useState } from 'react'
 import Header from './Header.jsx'
 import Sidebar from './Sidebar.jsx'
 
-const Layout = ({ children, user, onLogout }) => {
+const Layout = ({ children, user, onLogout, currentView, onViewChange }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex lg:w-64 lg:flex-shrink-0">
-        <Sidebar user={user} />
+        <Sidebar
+          user={user}
+          currentView={currentView}
+          onViewChange={onViewChange}
+        />
       </div>
 
       {/* Mobile Sidebar Overlay */}
@@ -20,7 +24,13 @@ const Layout = ({ children, user, onLogout }) => {
             onClick={() => setSidebarOpen(false)}
           />
           <div className="fixed inset-y-0 left-0 z-50 w-64 lg:hidden">
-            <Sidebar mobile onClose={() => setSidebarOpen(false)} user={user} />
+            <Sidebar
+              mobile
+              onClose={() => setSidebarOpen(false)}
+              user={user}
+              currentView={currentView}
+              onViewChange={onViewChange}
+            />
           </div>
         </>
       )}

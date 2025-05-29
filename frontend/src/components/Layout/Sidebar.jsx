@@ -1,22 +1,29 @@
 import React, { useState } from 'react'
-import { NavLink } from 'react-router-dom'
 import {
   Menu, Bell, User, LogOut, Settings, ChevronDown, Heart, Activity,
   LayoutDashboard, FileText, Users, BarChart3, X
 } from 'lucide-react'
-import Profile from '../Profile.jsx'
-import Header from "./Header.jsx";
 
 // Обновленный Sidebar компонент
-const Sidebar = ({ mobile, onClose, user }) => {
+const Sidebar = ({ mobile, onClose, user, currentView, onViewChange }) => {
   const navigation = [
-    { name: 'Главная', href: '/main', icon: Activity },
-    { name: 'Мониторинг', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'История болезни', href: '/history', icon: FileText },
-    { name: 'Устройства', href: '/devices', icon: Activity },
-    { name: 'Аналитика', href: '/analytics', icon: BarChart3 },
-    { name: 'Настройки', href: '/settings', icon: Settings },
+    { name: 'Главная', id: 'main', icon: Activity },
+    { name: 'Мониторинг', id: 'dashboard', icon: LayoutDashboard },
+    { name: 'История болезни', id: 'history', icon: FileText },
+    { name: 'Устройства', id: 'devices', icon: Activity },
+    { name: 'Аналитика', id: 'analytics', icon: BarChart3 },
+    { name: 'Настройки', id: 'settings', icon: Settings },
   ]
+
+  const handleNavClick = (viewId) => {
+    if (onViewChange) {
+      onViewChange(viewId)
+    }
+    // Закрываем мобильное меню после выбора
+    if (mobile && onClose) {
+      onClose()
+    }
+  }
 
   return (
     <div className="flex flex-col bg-white shadow-xl border-r border-gray-200 w-full">
@@ -48,7 +55,7 @@ const Sidebar = ({ mobile, onClose, user }) => {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
-                {user.fullName || 'Пользователь'}
+                {user.fullName || user.full_name || 'Пользователь'}
               </p>
               <p className="text-xs text-gray-500">
                 ID: #{user.id || '1'}
@@ -61,20 +68,18 @@ const Sidebar = ({ mobile, onClose, user }) => {
       {/* Navigation */}
       <nav className="flex-1 px-2 py-4 space-y-1">
         {navigation.map((item) => (
-          <NavLink
-            key={item.name}
-            to={item.href}
-            className={({ isActive }) =>
-              `group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                isActive
-                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-500 shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`
-            }
+          <button
+            key={item.id}
+            onClick={() => handleNavClick(item.id)}
+            className={`w-full group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+              currentView === item.id
+                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-500 shadow-sm'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }`}
           >
             <item.icon className="flex-shrink-0 h-5 w-5 mr-3" />
             {item.name}
-          </NavLink>
+          </button>
         ))}
       </nav>
 
@@ -88,4 +93,5 @@ const Sidebar = ({ mobile, onClose, user }) => {
     </div>
   )
 }
+
 export default Sidebar;

@@ -1,3 +1,5 @@
+// Замените ваш components/Login.jsx на этот код:
+
 import React, { useState } from 'react'
 import { Heart, User, Lock, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react'
 import api from '../services/api'
@@ -12,21 +14,56 @@ const Login = ({ onLogin }) => {
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('login')
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    console.log('Login: Form submitted')
+
     setIsLoading(true)
     setError('')
 
     try {
-      // Авторизация через API
-      await api.login(formData.email, formData.password)
+      console.log('Login: Starting login process for:', formData.email)
 
-      // Получаем информацию о пользователе
-      const userInfo = await api.getMe()
+      // Авторизация через API - этот метод должен вернуть токены И данные пользователя
+      const loginData = await api.login(formData.email, formData.password)
+      console.log('Login: Login successful, received data:', loginData)
 
-      onLogin(userInfo)
+      // Если в ответе логина нет данных пользователя, получаем их отдельно
+      let userInfo = loginData.user || loginData
+
+      // Если нет полных данных пользователя, делаем дополнительный запрос
+      if (!userInfo.id && !userInfo.user_id) {
+        console.log('Login: Getting additional user info...')
+        userInfo = await api.getMe()
+        console.log('Login: User info received:', userInfo)
+      }
+
+      // Убеждаемся что у пользователя есть все необходимые поля
+      const completeUserInfo = {
+        id: userInfo.id || userInfo.user_id,
+        email: userInfo.email,
+        fullName: userInfo.full_name || userInfo.fullName || `${userInfo.first_name || ''} ${userInfo.last_name || ''}`.trim(),
+        full_name: userInfo.full_name || userInfo.fullName,
+        username: userInfo.username,
+        first_name: userInfo.first_name,
+        last_name: userInfo.last_name,
+        profile: userInfo.profile || {},
+        devices: userInfo.devices || [],
+        ...userInfo
+      }
+
+      console.log('Login: Complete user info prepared:', completeUserInfo)
+
+      // Проверяем что ID присутствует
+      if (!completeUserInfo.id) {
+        throw new Error('User data incomplete: missing ID field')
+      }
+
+      console.log('Login: Calling onLogin with user data')
+      onLogin(completeUserInfo)
 
     } catch (error) {
-      console.error('Login error:', error)
+      console.error('Login: Error occurred:', error)
       setError(error.message || 'Ошибка авторизации')
     } finally {
       setIsLoading(false)
@@ -83,7 +120,7 @@ const Login = ({ onLogin }) => {
 
           <div className="px-8 py-8">
             {activeTab === 'login' ? (
-              <div className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 {error && (
                   <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg animate-in slide-in-from-top duration-200">
                     <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
@@ -138,8 +175,8 @@ const Login = ({ onLogin }) => {
                 </div>
 
                 <button
-                  onClick={handleSubmit}
-                  disabled={isLoading}
+                  type="submit"
+                  disabled={isLoading || !formData.email || !formData.password}
                   className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
@@ -157,7 +194,22 @@ const Login = ({ onLogin }) => {
                     Забыли пароль?
                   </a>
                 </div>
-              </div>
+
+                {/* Кнопка для быстрого тестирования */}
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="pt-4 border-t border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData({ email: 'test@example.com', password: 'password123' })
+                      }}
+                      className="w-full text-sm text-gray-600 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Заполнить тестовыми данными
+                    </button>
+                  </div>
+                )}
+              </form>
             ) : (
               <div className="text-center py-8">
                 <div className="mb-4">

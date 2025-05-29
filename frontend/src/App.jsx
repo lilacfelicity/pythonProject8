@@ -1,3 +1,5 @@
+// Замените ваш App.jsx на этот код:
+
 import React, { useState, useEffect, Suspense } from 'react'
 import Layout from './components/Layout/Layout.jsx'
 import api from './services/api'
@@ -18,14 +20,6 @@ const LoadingSpinner = () => (
   </div>
 )
 
-// Защищенный роут
-const ProtectedRoute = ({ children, user }) => {
-  if (!user) {
-    return <Navigate to="/login" replace />
-  }
-  return children
-}
-
 // Главное приложение
 function App() {
   const [user, setUser] = useState(null)
@@ -36,40 +30,63 @@ function App() {
   // Проверка авторизации при загрузке приложения
   useEffect(() => {
     const checkAuth = async () => {
-      console.log('Checking authentication...')
+      console.log('App: Checking authentication...')
 
       try {
         // Проверяем есть ли токен и валиден ли он
         if (api.isAuthenticated()) {
-          console.log('Token found, verifying...')
+          console.log('App: Token found, verifying...')
 
           // Пытаемся получить информацию о пользователе
           const userInfo = await api.getMe()
-          console.log('User info received:', userInfo)
+          console.log('App: User info received:', userInfo)
 
-          setUser(userInfo)
+          // Нормализуем данные пользователя
+          const normalizedUser = {
+            id: userInfo.id || userInfo.user_id,
+            email: userInfo.email,
+            username: userInfo.username,
+            full_name: userInfo.full_name || userInfo.fullName,
+            fullName: userInfo.full_name || userInfo.fullName,
+            first_name: userInfo.first_name,
+            last_name: userInfo.last_name,
+            profile: userInfo.profile || {},
+            devices: userInfo.devices || [],
+            ...userInfo
+          }
+
+          console.log('App: Normalized user data:', normalizedUser)
+
+          // Проверяем что у пользователя есть ID
+          if (!normalizedUser.id) {
+            console.error('App: User data is missing ID field:', normalizedUser)
+            throw new Error('User data is incomplete - missing ID')
+          }
+
+          setUser(normalizedUser)
 
           // Сохраняем пользователя в localStorage для восстановления сессии
-          localStorage.setItem('medmonitor_user', JSON.stringify(userInfo))
+          localStorage.setItem('medmonitor_user', JSON.stringify(normalizedUser))
 
           // Проверяем первый ли это визит
           const isFirstVisit = localStorage.getItem('medmonitor_first_visit')
           if (!isFirstVisit) {
+            console.log('App: First visit detected, showing welcome')
             setShowWelcome(true)
           }
         } else {
-          console.log('No valid token found')
+          console.log('App: No valid token found')
           // Токена нет или он невалиден, проверяем localStorage
           const savedUser = localStorage.getItem('medmonitor_user')
           if (savedUser) {
-            console.log('Clearing stale user data')
+            console.log('App: Clearing stale user data')
             // Очищаем устаревшие данные
             localStorage.removeItem('medmonitor_user')
             localStorage.removeItem('medmonitor_first_visit')
           }
         }
       } catch (error) {
-        console.error('Auth check failed:', error)
+        console.error('App: Auth check failed:', error)
         // В случае ошибки очищаем все данные
         handleLogout()
       } finally {
@@ -83,33 +100,57 @@ function App() {
   // Обработка входа в систему
   const handleLogin = async (userData) => {
     try {
-      console.log('User logged in:', userData)
-      setUser(userData)
+      console.log('App: User logged in:', userData)
+
+      // Нормализуем данные пользователя
+      const normalizedUser = {
+        id: userData.id || userData.user_id || userData.user?.id,
+        email: userData.email || userData.user?.email,
+        username: userData.username || userData.user?.username,
+        full_name: userData.full_name || userData.fullName || userData.user?.full_name,
+        fullName: userData.full_name || userData.fullName || userData.user?.full_name,
+        first_name: userData.first_name || userData.user?.first_name,
+        last_name: userData.last_name || userData.user?.last_name,
+        profile: userData.profile || userData.user?.profile || {},
+        devices: userData.devices || userData.user?.devices || [],
+        ...userData
+      }
+
+      console.log('App: Setting normalized user data:', normalizedUser)
+
+      // Проверяем что у пользователя есть ID
+      if (!normalizedUser.id) {
+        console.error('App: Login - User data is missing ID field:', normalizedUser)
+        throw new Error('User data is incomplete - missing ID')
+      }
+
+      setUser(normalizedUser)
 
       // Сохраняем пользователя в localStorage
-      localStorage.setItem('medmonitor_user', JSON.stringify(userData))
+      localStorage.setItem('medmonitor_user', JSON.stringify(normalizedUser))
 
       // Проверяем первый ли это визит
       const isFirstVisit = localStorage.getItem('medmonitor_first_visit')
       if (!isFirstVisit) {
+        console.log('App: First login, showing welcome')
         setShowWelcome(true)
       }
 
     } catch (error) {
-      console.error('Login error:', error)
+      console.error('App: Login error:', error)
       throw error
     }
   }
 
   // Обработка выхода из системы
   const handleLogout = async () => {
-    console.log('Logging out...')
+    console.log('App: Logging out...')
 
     try {
       // Отправляем запрос на выход (опционально)
       await api.logout()
     } catch (error) {
-      console.warn('Logout request failed:', error)
+      console.warn('App: Logout request failed:', error)
     } finally {
       // Очищаем локальное состояние
       setUser(null)
@@ -120,12 +161,13 @@ function App() {
       localStorage.removeItem('medmonitor_user')
       localStorage.removeItem('medmonitor_first_visit')
 
-      console.log('Logout completed')
+      console.log('App: Logout completed')
     }
   }
 
   // Завершение приветственного экрана
   const handleWelcomeComplete = () => {
+    console.log('App: Welcome completed')
     setShowWelcome(false)
     localStorage.setItem('medmonitor_first_visit', 'true')
   }
@@ -138,11 +180,11 @@ function App() {
       try {
         const isValid = await api.checkAuthStatus()
         if (!isValid) {
-          console.warn('Token expired, logging out')
+          console.warn('App: Token expired, logging out')
           handleLogout()
         }
       } catch (error) {
-        console.error('Token check failed:', error)
+        console.error('App: Token check failed:', error)
         handleLogout()
       }
     }, 5 * 60 * 1000) // 5 минут
@@ -180,6 +222,7 @@ function App() {
 
   // Показываем логин если пользователь не авторизован
   if (!user) {
+    console.log('App: No user, showing login')
     return (
       <Suspense fallback={<LoadingSpinner />}>
         <Login onLogin={handleLogin} />
@@ -189,6 +232,8 @@ function App() {
 
   // Основное приложение для авторизованных пользователей
   const renderCurrentView = () => {
+    console.log('App: Rendering view:', currentView, 'for user:', user.id)
+
     switch (currentView) {
       case 'dashboard':
         return <Dashboard user={user} onLogout={handleLogout} />
@@ -241,7 +286,7 @@ const MainPage = ({ user }) => {
           normalValues: (analyticsData.total_readings - analyticsData.anomalies_count) || '--'
         })
       } catch (error) {
-        console.error('Failed to load stats:', error)
+        console.error('MainPage: Failed to load stats:', error)
         // Оставляем placeholder'ы
       }
     }
@@ -345,7 +390,7 @@ const DevicesPage = ({ user }) => {
         const devicesData = await api.getDevices()
         setDevices(devicesData)
       } catch (error) {
-        console.error('Failed to load devices:', error)
+        console.error('DevicesPage: Failed to load devices:', error)
         setDevices([])
       } finally {
         setIsLoading(false)
