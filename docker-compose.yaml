@@ -31,7 +31,7 @@ services:
     networks:
       - medical_network
 
-  # PostgreSQL for main application
+
   postgres:
     image: postgres:15-alpine
     container_name: postgres
@@ -52,7 +52,7 @@ services:
     networks:
       - medical_network
 
-  # Redis
+
   redis:
     image: redis:7-alpine
     container_name: redis
@@ -70,7 +70,7 @@ services:
     networks:
       - medical_network
 
-  # Backend API
+
   backend:
     build:
       context: ./backend
@@ -102,16 +102,15 @@ services:
     networks:
       - medical_network
 
-  # Frontend
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: medical_frontend
     environment:
-      - VITE_API_URL=http://localhost
-      - VITE_WS_URL=ws://localhost/ws
-      - VITE_GRAFANA_URL=/grafana
+      - VITE_API_URL=http://192.168.31.137
+      - VITE_WS_URL=ws://192.168.31.137/ws
+      - VITE_GRAFANA_URL=/192.168.31.137
     expose:
       - "3000"
     volumes:
@@ -128,12 +127,14 @@ services:
     networks:
       - medical_network
 
-  # IoT Simulator
   iot-simulator:
     build:
       context: ./iot-simulator
       dockerfile: Dockerfile
     container_name: iot_simulator
+    volumes:
+      # Маунтим исходники для hot reload
+      - ./simulator.py:/simulator.py
     environment:
       - API_URL=http://nginx/api
     depends_on:
@@ -143,7 +144,7 @@ services:
     networks:
       - medical_network
 
-  # Grafana
+
 
   grafana:
     image: grafana/grafana:10.2.0

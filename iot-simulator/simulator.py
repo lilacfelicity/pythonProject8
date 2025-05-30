@@ -84,14 +84,14 @@ class IoTDeviceSimulator:
 
         try:
             async with session.post(
-                    f"{self.api_url}/api/vitals/iot",
+                    f"{self.api_url}/vitals/iot",
                     json=payload
             ) as response:
                 if response.status == 200:
                     logger.info(
                         f"✅ Device {self.device_id}: Sent vitals - HR: {vitals['heart_rate']}, SpO2: {vitals['spo2']}")
                 else:
-                    logger.error(f"❌ Device {self.device_id}: Failed to send data - {response.status}")
+                    logger.error(f"❌ Device {self.device_id}: Failed to send data - {response.status} - " + f"{self.api_url}/vitals/iot")
         except Exception as e:
             logger.error(f"❌ Device {self.device_id}: Connection error - {e}")
 

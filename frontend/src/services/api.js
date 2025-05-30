@@ -1,6 +1,6 @@
 // Замените ваш services/api.js на этот код:
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:80'
+const API_URL = import.meta.env.VITE_API_URL || 'http://192.168.31.137:80'
 
 class ApiService {
   constructor() {
