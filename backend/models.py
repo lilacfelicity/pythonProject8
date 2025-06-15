@@ -17,7 +17,7 @@ class PrefixedBase:
     def __tablename__(cls):
         # Конвертируем CamelCase в snake_case и добавляем префикс
         name = cls.__name__
-        # UserProfile -> user_profiles, HeartData -> heart_data
+        # UserProfile -> user_profile, HeartData -> heart_data
         import re
         name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
         name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()

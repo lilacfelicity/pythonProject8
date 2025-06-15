@@ -1,12 +1,28 @@
 apiVersion: 1
 
 providers:
-  - name: 'Medical IoT'
+  - name: 'Medical Dashboards'
     orgId: 1
-    folder: ''
+    folder: 'Medical System'
     type: file
     disableDeletion: false
+    editable: false
     updateIntervalSeconds: 10
     allowUiUpdates: true
     options:
       path: /grafana/dashboards
+  - name: 'default'
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: true
+    editable: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /grafana/dashboards
+      foldersFromFilesStructure: true
+    # Настройки по умолчанию для всех дашбордов
+    folderUid: ''
+    # Разрешения по умолчанию для дашбордов
+    access: proxy

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import asyncio
 import aiohttp
 import random
@@ -7,7 +8,7 @@ from datetime import datetime
 import math
 import os
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(name)s:%(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -41,12 +42,9 @@ class IoTDeviceSimulator:
 
         # Calculate vitals
         hr = self.base_hr + (self.activity_level * 40) + (self.stress_level * 20) + random.gauss(0, 3) + time_factor * 5
-
         temp = self.base_temp + (self.activity_level * 0.5) + random.gauss(0, 0.1)
-
         spo2 = self.base_spo2 - (self.activity_level * 2) + random.gauss(0, 0.5)
         spo2 = max(94, min(100, spo2))  # Clamp to realistic range
-
         bp_sys = self.base_bp_sys + (self.activity_level * 20) + (self.stress_level * 15) + random.gauss(0, 5)
         bp_dia = self.base_bp_dia + (self.activity_level * 10) + (self.stress_level * 8) + random.gauss(0, 3)
 
@@ -85,22 +83,24 @@ class IoTDeviceSimulator:
         try:
             async with session.post(
                     f"{self.api_url}/vitals/iot",
-                    json=payload
+                    json=payload,
+                    headers={"Content-Type": "application/json"}
             ) as response:
                 if response.status == 200:
                     logger.info(
-                        f"✅ Device {self.device_id}: Sent vitals - HR: {vitals['heart_rate']}, SpO2: {vitals['spo2']}")
+                        f"✅ {self.device_id}: HR={vitals['heart_rate']}, SpO2={vitals['spo2']}, BP={vitals['blood_pressure_systolic']}/{vitals['blood_pressure_diastolic']}")
                 else:
-                    logger.error(f"❌ Device {self.device_id}: Failed to send data - {response.status} - " + f"{self.api_url}/vitals/iot")
+                    response_text = await response.text()
+                    logger.error(f"❌ {self.device_id}: HTTP {response.status} - {response_text}")
         except Exception as e:
-            logger.error(f"❌ Device {self.device_id}: Connection error - {e}")
+            logger.error(f"❌ {self.device_id}: {e}")
 
     async def run(self, interval: int = 10):
         """Run the simulator"""
         self.running = True
-        logger.info(f"🚀 Device {self.device_id} started - sending data every {interval}s")
+        logger.info(f"🚀 {self.device_id} started - sending every {interval}s")
 
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as session:
             while self.running:
                 await self.send_data(session)
                 await asyncio.sleep(interval)
@@ -108,7 +108,7 @@ class IoTDeviceSimulator:
     def stop(self):
         """Stop the simulator"""
         self.running = False
-        logger.info(f"🛑 Device {self.device_id} stopped")
+        logger.info(f"🛑 {self.device_id} stopped")
 
 
 class MultiDeviceSimulator:
@@ -128,11 +128,14 @@ class MultiDeviceSimulator:
         for device in self.devices:
             task = asyncio.create_task(device.run(interval))
             tasks.append(task)
-
         await asyncio.gather(*tasks)
 
 
 async def main():
+    """Основная функция"""
+    print("🏥 Medical IoT Simulator - ПРОСТАЯ ВЕРСИЯ")
+    print("=" * 50)
+
     # Configuration
     API_URL = os.getenv("API_URL", "http://nginx/api")  # Through nginx in Docker
     # API_URL = "http://localhost/api"  # Local testing through nginx
@@ -150,14 +153,14 @@ async def main():
     for device_id in devices:
         simulator.add_device(device_id)
 
-    logger.info(f"🏥 Medical IoT Simulator Started - {len(devices)} devices")
-    logger.info(f"📡 Sending to: {API_URL}")
+    logger.info(f"🏥 Симулятор запущен - {len(devices)} устройств")
+    logger.info(f"📡 API URL: {API_URL}")
+    logger.info("💡 Для остановки нажмите Ctrl+C")
 
     try:
-        # Run with different intervals for variety
         await simulator.run_all(interval=10)
     except KeyboardInterrupt:
-        logger.info("⏹️  Simulator stopped by user")
+        logger.info("⏹️  Симулятор остановлен пользователем")
 
 
 if __name__ == "__main__":

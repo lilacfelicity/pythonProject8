@@ -1,117 +1,148 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { FileText, Calendar, User, Pill, Activity, Download, Filter, Search, Plus } from 'lucide-react'
+import api from '../services/api'
 
 const MedicalHistory = ({ user }) => {
   const [activeTab, setActiveTab] = useState('visits')
   const [searchTerm, setSearchTerm] = useState('')
   const [dateFilter, setDateFilter] = useState('all')
+  const [isLoading, setIsLoading] = useState(true)
+  const [medicalData, setMedicalData] = useState({
+    visits: [],
+    diagnoses: [],
+    medications: [],
+    labTests: []
+  })
 
-  // Расширенные тестовые данные
-  const medicalData = {
-    visits: [
-      {
-        id: 1,
-        date: "02.05.2025",
-        doctor: "Сидорова Анна Владимировна",
-        specialty: "Терапевт",
-        diagnosis: "Первичный визит",
-        notes: "Пациентка обратилась для профилактического осмотра. Жалоб не предъявляет.",
-        status: "completed"
-      },
-      {
-        id: 2,
-        date: "15.10.2024",
-        doctor: "Петрова Наталья Ивановна",
-        specialty: "Аллерголог",
-        diagnosis: "Аллергический ринит",
-        notes: "Обострение сезонного аллергического ринита. Назначена поддерживающая терапия.",
-        status: "monitoring"
-      },
-      {
-        id: 3,
-        date: "12.07.2024",
-        doctor: "Сидорова Анна Владимировна",
-        specialty: "Терапевт",
-        diagnosis: "ОРЗ",
-        notes: "Острое респираторное заболевание, легкая форма. Полное выздоровление.",
-        status: "resolved"
+  // Загрузка медицинских данных
+  useEffect(() => {
+    loadMedicalData()
+  }, [])
+
+  const loadMedicalData = async () => {
+    setIsLoading(true)
+    try {
+      console.log('MedicalHistory: Loading medical data...')
+
+      // Получаем данные медицинской истории
+      const historyData = await api.getMedicalHistoryData()
+
+      // Получаем лабораторные данные
+      const labData = await api.getLabData()
+
+      // Преобразуем лабораторные данные в формат для истории
+      const labTests = []
+
+      // Добавляем анализы крови
+      if (labData.bloodTests && labData.bloodTests.length > 0) {
+        labData.bloodTests.forEach(test => {
+          labTests.push({
+            id: `blood_${test.date}`,
+            date: new Date(test.date).toLocaleDateString('ru-RU'),
+            name: 'Общий анализ крови',
+            doctor: 'Лабораторная служба',
+            results: `Гемоглобин: ${test.hemoglobin || 'н/д'} г/л, Лейкоциты: ${test.leukocytes || 'н/д'} ×10⁹/л, Тромбоциты: ${test.platelets || 'н/д'} ×10⁹/л`,
+            status: 'completed'
+          })
+        })
       }
-    ],
-    diagnoses: [
-      {
-        id: 1,
-        date: "10.02.2025",
-        doctor: "Петрова Наталья Ивановна",
-        specialty: "Терапевт",
-        diagnosis: "Гипертоническая болезнь 1 степени",
-        icd10: "I10",
-        status: "active",
-        notes: "Поставлен диагноз 'Гипертоническая болезнь 1 степени'. Назначено амбулаторное лечение."
-      },
-      {
-        id: 2,
-        date: "16.10.2024",
-        doctor: "Петрова Наталья Ивановна",
-        specialty: "Аллерголог",
-        diagnosis: "Аллергический ринит",
-        icd10: "J30.1",
-        status: "chronic",
-        notes: "Аллергический ринит в стадии ремиссии. Поддерживающая терапия."
+
+      // Добавляем биохимические анализы
+      if (labData.biochemistry && labData.biochemistry.length > 0) {
+        labData.biochemistry.forEach(test => {
+          labTests.push({
+            id: `bio_${test.date}`,
+            date: new Date(test.date).toLocaleDateString('ru-RU'),
+            name: 'Биохимический анализ крови',
+            doctor: 'Лабораторная служба',
+            results: `Глюкоза: ${test.glucose || 'н/д'} ммоль/л, АЛТ: ${test.alt || 'н/д'} Ед/л, АСТ: ${test.ast || 'н/д'} Ед/л`,
+            status: 'completed'
+          })
+        })
       }
-    ],
-    medications: [
-      {
-        id: 1,
-        name: "Омепразол",
-        dosage: "20мг",
-        frequency: "1 раз в день утром",
-        startDate: "01.03.2025",
-        endDate: null,
-        prescribedBy: "Петрова Наталья Ивановна",
-        status: "active",
-        notes: "Принимать за 30 минут до еды"
-      },
-      {
-        id: 2,
-        name: "Анальгин",
-        dosage: "500мг",
-        frequency: "При болях, не более 3 раз в день",
-        startDate: "15.02.2025",
-        endDate: null,
-        prescribedBy: "Сидорова Анна Владимировна",
-        status: "as_needed",
-        notes: "При головной боли или мышечных болях"
-      },
-      {
-        id: 3,
-        name: "Лоратадин",
-        dosage: "10мг",
-        frequency: "1 раз в день",
-        startDate: "10.02.2025",
-        endDate: "10.05.2025",
-        prescribedBy: "Петрова Наталья Ивановна",
-        status: "completed",
-        notes: "Курс противоаллергической терапии"
+
+      // Добавляем анализы на гормоны
+      if (labData.hormones && labData.hormones.length > 0) {
+        labData.hormones.forEach(test => {
+          labTests.push({
+            id: `hormones_${test.date}`,
+            date: new Date(test.date).toLocaleDateString('ru-RU'),
+            name: 'Гормональные исследования',
+            doctor: 'Лабораторная служба',
+            results: `ТТГ: ${test.tsh || 'н/д'} мЕд/л, Т4 свободный: ${test.t4_free || 'н/д'} пмоль/л`,
+            status: 'completed'
+          })
+        })
       }
-    ],
-    labTests: [
-      {
-        id: 1,
-        date: "25.04.2025",
-        name: "Общий анализ крови",
-        doctor: "Петрова Наталья Ивановна",
-        results: "В пределах нормы",
-        status: "completed"
-      },
-      {
-        id: 2,
-        date: "25.04.2025",
-        name: "Биохимический анализ крови",
-        doctor: "Петрова Наталья Ивановна",
-        results: "Глюкоза 5.2 ммоль/л (норма), холестерин 4.8 ммоль/л (норма)",
-        status: "completed"
+
+      // Добавляем анализы на витамины
+      if (labData.vitamins && labData.vitamins.length > 0) {
+        labData.vitamins.forEach(test => {
+          labTests.push({
+            id: `vitamins_${test.date}`,
+            date: new Date(test.date).toLocaleDateString('ru-RU'),
+            name: 'Анализ витаминов и микроэлементов',
+            doctor: 'Лабораторная служба',
+            results: `Витамин D: ${test.vitamin_d || 'н/д'} нг/мл, Витамин B12: ${test.vitamin_b12 || 'н/д'} пг/мл, Ферритин: ${test.ferritin || 'н/д'} нг/мл`,
+            status: 'completed'
+          })
+        })
       }
-    ]
+
+      // Устанавливаем данные (пока используем заглушки для visits, diagnoses, medications)
+      setMedicalData({
+        visits: [
+          {
+            id: 1,
+            date: "02.05.2025",
+            doctor: "Сидорова Анна Владимировна",
+            specialty: "Терапевт",
+            diagnosis: "Первичный визит",
+            notes: "Пациент обратился для профилактического осмотра. Жалоб не предъявляет.",
+            status: "completed"
+          }
+        ],
+        diagnoses: [
+          {
+            id: 1,
+            date: "10.02.2025",
+            doctor: "Петрова Наталья Ивановна",
+            specialty: "Терапевт",
+            diagnosis: "Общее наблюдение",
+            icd10: "Z00.0",
+            status: "active",
+            notes: "Пациент под общим наблюдением"
+          }
+        ],
+        medications: [
+          {
+            id: 1,
+            name: "По назначению врача",
+            dosage: "По показаниям",
+            frequency: "При необходимости",
+            startDate: new Date().toLocaleDateString('ru-RU'),
+            endDate: null,
+            prescribedBy: "Лечащий врач",
+            status: "as_needed",
+            notes: "Препараты назначаются по мере необходимости"
+          }
+        ],
+        labTests: labTests.sort((a, b) => new Date(b.date.split('.').reverse().join('-')) - new Date(a.date.split('.').reverse().join('-')))
+      })
+
+      console.log('MedicalHistory: Medical data loaded successfully')
+    } catch (error) {
+      console.error('MedicalHistory: Failed to load medical data:', error)
+      // Устанавливаем пустые данные при ошибке
+      setMedicalData({
+        visits: [],
+        diagnoses: [],
+        medications: [],
+        labTests: []
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const tabs = [
@@ -152,6 +183,23 @@ const MedicalHistory = ({ user }) => {
     }
   }
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">История болезни</h1>
+            <p className="text-gray-600 mt-1">Загрузка медицинских данных...</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600">Загрузка истории болезни...</span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -159,7 +207,7 @@ const MedicalHistory = ({ user }) => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">История болезни</h1>
           <p className="text-gray-600 mt-1">
-            Полная медицинская карта • {user?.fullName || 'Пациент'}
+            Полная медицинская карта • {user?.fullName || user?.full_name || 'Пациент'}
           </p>
         </div>
 
@@ -168,9 +216,12 @@ const MedicalHistory = ({ user }) => {
             <Download className="h-4 w-4" />
             <span>Экспорт</span>
           </button>
-          <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+          <button
+            onClick={loadMedicalData}
+            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          >
             <Plus className="h-4 w-4" />
-            <span>Добавить</span>
+            <span>Обновить</span>
           </button>
         </div>
       </div>
@@ -204,7 +255,7 @@ const MedicalHistory = ({ user }) => {
 
           <div className="flex items-center space-x-2 text-sm text-gray-500">
             <Filter className="h-4 w-4" />
-            <span>Всего записей: {medicalData.visits.length + medicalData.diagnoses.length + medicalData.medications.length}</span>
+            <span>Всего записей: {medicalData.visits.length + medicalData.diagnoses.length + medicalData.medications.length + medicalData.labTests.length}</span>
           </div>
         </div>
       </div>
@@ -240,7 +291,7 @@ const MedicalHistory = ({ user }) => {
               <h2 className="text-lg font-medium">Визиты к врачу</h2>
             </div>
             <div className="divide-y divide-gray-200">
-              {medicalData.visits.map((visit) => (
+              {medicalData.visits.length > 0 ? medicalData.visits.map((visit) => (
                 <div key={visit.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -264,7 +315,12 @@ const MedicalHistory = ({ user }) => {
                     </div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="px-6 py-8 text-center text-gray-500">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p>Нет записей о визитах к врачу</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -275,7 +331,7 @@ const MedicalHistory = ({ user }) => {
               <h2 className="text-lg font-medium">Диагнозы</h2>
             </div>
             <div className="divide-y divide-gray-200">
-              {medicalData.diagnoses.map((diagnosis) => (
+              {medicalData.diagnoses.length > 0 ? medicalData.diagnoses.map((diagnosis) => (
                 <div key={diagnosis.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -302,7 +358,12 @@ const MedicalHistory = ({ user }) => {
                     </div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="px-6 py-8 text-center text-gray-500">
+                  <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p>Нет записей о диагнозах</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -324,7 +385,7 @@ const MedicalHistory = ({ user }) => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {medicalData.medications.map((medication) => (
+                  {medicalData.medications.length > 0 ? medicalData.medications.map((medication) => (
                     <tr key={medication.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="font-medium text-gray-900">{medication.name}</div>
@@ -345,7 +406,14 @@ const MedicalHistory = ({ user }) => {
                         </span>
                       </td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                        <Pill className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                        <p>Нет записей о назначенных препаратах</p>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -358,7 +426,7 @@ const MedicalHistory = ({ user }) => {
               <h2 className="text-lg font-medium">Лабораторные анализы</h2>
             </div>
             <div className="divide-y divide-gray-200">
-              {medicalData.labTests.map((test) => (
+              {medicalData.labTests.length > 0 ? medicalData.labTests.map((test) => (
                 <div key={test.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -378,7 +446,13 @@ const MedicalHistory = ({ user }) => {
                     </span>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="px-6 py-8 text-center text-gray-500">
+                  <Activity className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p>Нет результатов лабораторных анализов</p>
+                  <p className="text-sm mt-2">Результаты анализов будут отображаться здесь после их загрузки в систему</p>
+                </div>
+              )}
             </div>
           </div>
         )}

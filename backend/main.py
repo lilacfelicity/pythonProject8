@@ -5,16 +5,15 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from api import auth, vitals, devices, analytics
+from api import auth, vitals, devices, analytics, export
 from core.websocket import manager, handle_websocket_message
 from services.redis_service import redis_service
-from database import engine, Base
+from database import engine
+# ИСПРАВЛЕНО: Импортируем Base из models, а не из database
+from models import Base
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Создание таблиц
-Base.metadata.create_all(bind=engine)
 
 
 @asynccontextmanager
@@ -23,8 +22,14 @@ async def lifespan(app: FastAPI):
     try:
         await redis_service.connect()
         logger.info("🚀 Medical Monitoring System Started")
+
+        # ИСПРАВЛЕНО: Раскомментируем создание таблиц
+        logger.info("📊 Creating database tables...")
+        Base.metadata.create_all(bind=engine)
         logger.info("📊 Database tables created/verified")
+
         logger.info("🔌 Redis connection established")
+        logger.info("📁 Export functionality enabled")
     except Exception as e:
         logger.error(f"Failed to start services: {e}")
         raise
@@ -43,7 +48,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Medical IoT Monitoring",
     version="2.1.0",
-    description="JWT-based Medical Monitoring System with WebSocket support",
+    description="JWT-based Medical Monitoring System with WebSocket support and data export",
     lifespan=lifespan
 )
 
@@ -60,6 +65,8 @@ app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
 app.include_router(vitals.router, prefix="/api/vitals", tags=["vitals"])
 app.include_router(devices.router, prefix="/api/devices", tags=["devices"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
+# ИСПРАВЛЕНО: Убираем дублирование роутера export
+app.include_router(export.router, prefix="/api/export", tags=["export"])
 
 
 @app.get("/")
@@ -69,7 +76,7 @@ async def root():
         "version": "2.1.0",
         "status": "operational",
         "auth": "JWT",
-        "features": ["Real-time monitoring", "WebSocket alerts", "Analytics"]
+        "features": ["Real-time monitoring", "WebSocket alerts", "Analytics", "Data export"]
     }
 
 
@@ -92,7 +99,8 @@ async def health_check():
                 "websocket": {
                     "status": "active",
                     **ws_info
-                }
+                },
+                "export": "available"
             }
         }
     except Exception as e:
@@ -112,7 +120,13 @@ async def system_status():
         "version": "2.1.0",
         "uptime": "calculated_uptime",  # Здесь можно добавить реальный uptime
         "connections": manager.get_connection_info(),
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
+        "features": {
+            "authentication": "JWT",
+            "websocket": "enabled",
+            "export_formats": ["CSV", "JSON"],
+            "real_time_monitoring": "enabled"
+        }
     }
 
 

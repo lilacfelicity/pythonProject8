@@ -1,0 +1,244 @@
+{
+    "id": null,
+    "uid": "medical-overview",
+    "title": "Medical System Overview",
+    "tags": [
+      "medical",
+      "overview"
+    ],
+    "timezone": "browser",
+    "schemaVersion": 30,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Total Patients",
+        "type": "stat",
+        "targets": [
+          {
+            "datasource": {
+              "type": "postgres",
+              "uid": "medical_postgres"
+            },
+            "format": "table",
+            "rawSql": "SELECT COUNT(*) as value FROM med_users WHERE role = 'patient'",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "short",
+            "displayName": "Пациенты"
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "textMode": "value_and_name"
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Active Devices",
+        "type": "stat",
+        "targets": [
+          {
+            "datasource": {
+              "type": "postgres",
+              "uid": "medical_postgres"
+            },
+            "format": "table",
+            "rawSql": "SELECT COUNT(*) as value FROM med_devices WHERE status = 'active'",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "short",
+            "displayName": "Активные устройства"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 6,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Recent Heart Rate Readings",
+        "type": "stat",
+        "targets": [
+          {
+            "datasource": {
+              "type": "postgres",
+              "uid": "medical_postgres"
+            },
+            "format": "table",
+            "rawSql": "SELECT COUNT(*) as value FROM med_heart_datas WHERE timestamp >= CURRENT_TIMESTAMP - INTERVAL '1 hour'",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "short",
+            "displayName": "Измерения за час"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 4,
+        "title": "Lab Tests This Month",
+        "type": "stat",
+        "targets": [
+          {
+            "datasource": {
+              "type": "postgres",
+              "uid": "medical_postgres"
+            },
+            "format": "table",
+            "rawSql": "SELECT COUNT(*) as value FROM med_lab_tests WHERE test_date >= DATE_TRUNC('month', CURRENT_TIMESTAMP)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "short",
+            "displayName": "Анализы за месяц"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 18,
+          "y": 0
+        }
+      },
+      {
+        "id": 5,
+        "title": "Heart Rate Trends (Last 24h)",
+        "type": "timeseries",
+        "targets": [
+          {
+            "datasource": {
+              "type": "postgres",
+              "uid": "medical_postgres"
+            },
+            "format": "time_series",
+            "rawSql": "SELECT \n  timestamp as time,\n  AVG(heart_rate) as \"Average Heart Rate\",\n  MIN(heart_rate) as \"Min Heart Rate\",\n  MAX(heart_rate) as \"Max Heart Rate\"\nFROM med_heart_datas \nWHERE timestamp >= CURRENT_TIMESTAMP - INTERVAL '24 hours'\n  AND heart_rate IS NOT NULL\nGROUP BY DATE_TRUNC('hour', timestamp), timestamp\nORDER BY timestamp",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "bpm",
+            "min": 40,
+            "max": 160
+          }
+        },
+        "gridPos": {
+          "h": 12,
+          "w": 24,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 6,
+        "title": "Device Activity",
+        "type": "bargauge",
+        "targets": [
+          {
+            "datasource": {
+              "type": "postgres",
+              "uid": "medical_postgres"
+            },
+            "format": "table",
+            "rawSql": "SELECT \n  d.name as device_name,\n  COUNT(hd.id) as readings_count\nFROM med_devices d\nLEFT JOIN med_heart_datas hd ON d.id = hd.device_id \n  AND hd.timestamp >= CURRENT_TIMESTAMP - INTERVAL '24 hours'\nWHERE d.status = 'active'\nGROUP BY d.name, d.id\nORDER BY readings_count DESC\nLIMIT 10",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "short"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 20
+        }
+      },
+      {
+        "id": 7,
+        "title": "Top Diagnoses",
+        "type": "piechart",
+        "targets": [
+          {
+            "datasource": {
+              "type": "postgres",
+              "uid": "medical_postgres"
+            },
+            "format": "table",
+            "rawSql": "SELECT \n  title as diagnosis,\n  COUNT(*) as count\nFROM med_diagnoses \nWHERE status = 'active'\nGROUP BY title\nORDER BY count DESC\nLIMIT 8",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "short"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 20
+        }
+      }
+    ]
+  }
+}
